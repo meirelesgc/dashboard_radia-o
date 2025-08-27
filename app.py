@@ -12,21 +12,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- FUNÇÕES DE API ---
 @st.cache_data
 def get_coordinates(city):
-    """Busca as coordenadas geográficas de uma cidade."""
-    url = "https://nominatim.openstreetmap.org/search"
-    headers = {'User-Agent': 'SolarViabilityApp/1.4 (contato@seuemail.com )'}
-    params = {'q': city, 'format': 'json', 'limit': 1}
+    """Busca as coordenadas geográficas de uma cidade usando OpenCage."""
+    
+    # Pega a chave da API de forma segura usando st.secrets
+    # O nome da chave 'opencage_api_key' deve corresponder ao que você configurou.
+    OPENCAGE_API_KEY = st.secrets["opencage_api_key"]
+    
+    url = "https://api.opencagedata.com/geocode/v1/json"
+    params = {
+        'q': city,
+        'key': OPENCAGE_API_KEY,
+        'limit': 1,
+        'no_annotations': 1,
+        'language': 'pt'
+    }
+    
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
-        if data:
-            return float(data[0]['lat']), float(data[0]['lon'])
+        
+        if data['results']:
+            lat = data['results'][0]['geometry']['lat']
+            lon = data['results'][0]['geometry']['lng']
+            return lat, lon
+        
         return None, None
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro ao buscar as coordenadas: {e}")
         return None, None
 
 @st.cache_data
